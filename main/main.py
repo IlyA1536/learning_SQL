@@ -24,19 +24,30 @@ db.execute('''
         FOREIGN KEY (course_id) REFERENCES courses (course_id) ON DELETE CASCADE);
 ''')
 
-db.execute('''
-        INSERT INTO students(name, age, major)
-        VALUES
-        ('John2', 13, 'Major2');
-''')
 
-db.execute('''
-        INSERT INTO courses(course_name, instructor)
-        VALUES
-        ('Math', 'Bob');
-''')
+def add_user(db, name, age, major):
+    db.execute(f'''INSERT INTO students(name, age, major)
+               VALUES (?, ?, ?)''', (name, age, major))
+    db.commit()
 
-db.commit()
+def add_course(db, course_name, instructor):
+    db.execute(f'''INSERT INTO courses(course_name, instructor)
+               VALUES (?, ?)''', (course_name, instructor))
+    db.commit()
+
+def add_student_to_course(db, student_id, course_id):
+    db.execute('''INSERT INTO student_courses(student_id, course_id)
+                VALUES (?, ?)''', (student_id, course_id))
+    db.commit()
+
+def get_student_courses(db, course_id):
+    return db.execute('''
+        SELECT students.name
+        FROM students
+        JOIN student_courses ON students.student_id = student_courses.student_id
+        WHERE student_courses.course_id = ?
+    ''', (course_id,)).fetchall()
+
 
 while True:
     print("\n1. Додати нового студента")
@@ -49,26 +60,35 @@ while True:
 
     choice = input("Оберіть опцію (1-7): ")
 
-    if choice == "1":
-        pass
+    match choice:
+        case "1":
+            add_user(db, input("Введіть ім'я студента: "), input("Введіть вік студента: "), input("Введіть факультет: "))
+            print(f"Студента додано успішно.")
 
-    elif choice == "2":
-        pass
+        case "2":
+            add_course(db, input("Введіть назву курсу: "), input("Введіть викладача курсу: "))
+            print(f"Курс додано успішно.")
 
-    elif choice == "3":
-        pass
-     
-    elif choice == "4":
-        pass
+        case "3":
+            print("Список студентів: ", db.execute('''SELECT * FROM students''').fetchall())
 
-    elif choice == "5":
-        pass
+        case "4":
+            print("Список курсів: ", db.execute('''SELECT * FROM courses''').fetchall())
 
-    elif choice == "6":
-        pass
-       
-    elif choice == "7":
-        break
+        case "5":
+            try:
+                add_student_to_course(db, input("Введіть id студента: "), input("Введіть id курсу: "))
+                print(f"Студента до курсу додано успішно.")
+            except sqlite3.IntegrityError:
+                print("Студент вже записаний на цей курс.")
+        
+        case "6":
+            course_id = int(input("Введіть id курсу: "))
+            print("Студенти на курсі: ", get_student_courses(db, course_id))
+            
 
-    else:
-        print("Некоректний вибір. Будь ласка, введіть число від 1 до 7.")
+        case "7":
+            break
+
+        case _:
+            print("Некоректний вибір. Будь ласка, введіть число від 1 до 7.")
